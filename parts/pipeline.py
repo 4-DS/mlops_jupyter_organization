@@ -88,7 +88,7 @@ class SinaraPipeline():
     @staticmethod
     def ensure_dataflow_fabric_repo_exists(args):
         fabric_repo_url, fabric_repo_username, fabric_repo_password = SinaraPipeline.get_fabric_repo(args)
-        repo_folder = Path(tempfile.gettempdir()) / '.sinaraml' / str(args.type)
+        repo_folder = Path(__file__).parent.resolve() / 'fabrics' / str(args.type)
 
         if repo_folder.exists():
             shutil.rmtree(repo_folder)
@@ -238,8 +238,6 @@ class SinaraPipeline():
         substep_name = step_template_default_substep_notebook[args.type]
 
         push_pipeline_cmd = f"python sinara_pipeline_push.py "\
-                            f"--git_step_template_url={step_template_url} "\
-                            f"--step_template_nb_substep={substep_name} "\
                             f"--current_dir={curr_dir} "\
                             f"--git_step_template_username={step_template_username} "\
                             f"--git_step_template_password={step_template_password} "\
