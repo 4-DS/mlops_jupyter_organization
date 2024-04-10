@@ -225,8 +225,6 @@ class SinaraPipeline():
 
     @staticmethod
     def push(args):
-        curr_dir = os.getcwd()
-
         if not args.type:
             while not args.type:
                 SinaraPipeline.ensure_pipeline_type(args, "push")
@@ -237,10 +235,9 @@ class SinaraPipeline():
              step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
         substep_name = step_template_default_substep_notebook[args.type]
 
+        curr_dir = os.getcwd()
         push_pipeline_cmd = f"python sinara_pipeline_push.py "\
                             f"--current_dir={curr_dir} "\
-                            f"--git_step_template_username={step_template_username} "\
-                            f"--git_step_template_password={step_template_password} "\
                             f"--git_provider_organization_api={step_template_provider_organization_api} "\
                             f"--git_provider_organization_url={step_template_provider_organization_url}"
 
@@ -253,8 +250,6 @@ class SinaraPipeline():
 
     @staticmethod
     def update(args):
-        curr_dir = os.getcwd()
-
         if args.component == "sinaralib":
 
             if not args.type:
@@ -266,6 +261,7 @@ class SinaraPipeline():
                 step_template_provider_organization_api, \
                 step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
 
+            curr_dir = os.getcwd()
             update_sinaralib_pipeline_cmd = f"python sinara_pipeline_update_sinaralib.py "\
                                             f"--current_dir={curr_dir} "\
                                             f"--git_provider_organization_api={step_template_provider_organization_api} "\
