@@ -1,5 +1,5 @@
 from .sinaraml_types import SinaraPipelineType, \
-                            dataflow_fabric_default_repos, \
+                            dataflow_fabric_default_repo, \
                             step_template_default_repo, \
                             step_template_default_substep_notebook
 import subprocess
@@ -48,7 +48,7 @@ class SinaraPipeline():
     @staticmethod
     def add_pull_handler(pipeline_cmd_parser):
         SinaraPipeline.pull_parser = pipeline_cmd_parser.add_parser('pull', help='pull sinara pipeline')
-        SinaraPipeline.pull_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
+        #SinaraPipeline.pull_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
         SinaraPipeline.pull_parser.add_argument('--fabric', type=str, help='sinara fabric repo url')
         SinaraPipeline.pull_parser.add_argument('--fabric_git_user', type=str, help='sinara fabric repo git user name')
         SinaraPipeline.pull_parser.add_argument('--fabric_git_password', type=str, help='sinara fabric repo git password')
@@ -62,7 +62,7 @@ class SinaraPipeline():
     @staticmethod
     def add_push_handler(pipeline_cmd_parser):
         SinaraPipeline.push_parser = pipeline_cmd_parser.add_parser('push', help='push sinara pipeline')
-        SinaraPipeline.push_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
+        #SinaraPipeline.push_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
         SinaraPipeline.push_parser.add_argument('--fabric', type=str, help='sinara fabric repo url')
         SinaraPipeline.push_parser.add_argument('--fabric_git_user', type=str, help='sinara fabric repo git user name')
         SinaraPipeline.push_parser.add_argument('--fabric_git_password', type=str, help='sinara fabric repo git password')
@@ -76,19 +76,20 @@ class SinaraPipeline():
     @staticmethod
     def add_update_handler(pipeline_cmd_parser):
         SinaraPipeline.update_parser = pipeline_cmd_parser.add_parser('update', help='update sinara pipeline components')
-        SinaraPipeline.update_parser.add_argument('component', choices=['sinaralib'], type=str, help='sinara component to update')
-        SinaraPipeline.update_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
+        SinaraPipeline.update_parser.add_argument('--component', choices=['sinaralib', 'origin'], type=str, help='sinara component to update')
+        #SinaraPipeline.update_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
         SinaraPipeline.update_parser.add_argument('--fabric', type=str, help='sinara fabric repo url')
         SinaraPipeline.update_parser.add_argument('--fabric_git_user', type=str, help='sinara fabric repo git user name')
         SinaraPipeline.update_parser.add_argument('--fabric_git_password', type=str, help='sinara fabric repo git password')
         SinaraPipeline.update_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
         SinaraPipeline.update_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
+        SinaraPipeline.update_parser.add_argument('--new_origin_url', type=str, help='"new git origin url for pipelinr steps')
         SinaraPipeline.update_parser.set_defaults(func=SinaraPipeline.update)
 
     @staticmethod
     def ensure_dataflow_fabric_repo_exists(args):
         fabric_repo_url, fabric_repo_username, fabric_repo_password = SinaraPipeline.get_fabric_repo(args)
-        repo_folder = Path(__file__).parent.resolve() / 'fabrics' / str(args.type)
+        repo_folder = Path(__file__).parent.resolve() / 'fabric'
 
         if repo_folder.exists():
             shutil.rmtree(repo_folder)
@@ -132,19 +133,19 @@ class SinaraPipeline():
 
     @staticmethod
     def get_step_template_repo(args):
-        repo_url = step_template_default_repo[args.type]['url'] \
+        repo_url = step_template_default_repo['url'] \
             if not 'step_template' in args or not args.step_template else args.step_template
         
-        repo_user = step_template_default_repo[args.type]['username'] \
+        repo_user = step_template_default_repo['username'] \
              if not 'step_template_git_user' in args or not args.step_template_git_user else args.step_template_git_user
         
-        repo_password = step_template_default_repo[args.type]['password'] \
+        repo_password = step_template_default_repo['password'] \
             if not 'step_template_git_password' in args or not args.step_template_git_password else args.step_template_git_password
         
-        repo_provider_organization_api = step_template_default_repo[args.type]['provider_organization_api'] \
+        repo_provider_organization_api = step_template_default_repo['provider_organization_api'] \
             if not 'step_template_provider_organization_api' in args or not args.step_template_provider_organization_api else args.step_template_provider_organization_api
 
-        repo_provider_organization_url = step_template_default_repo[args.type]['provider_organization_url'] \
+        repo_provider_organization_url = step_template_default_repo['provider_organization_url'] \
             if not 'step_template_provider_organization_url' in args or not args.step_template_provider_organization_url else args.step_template_provider_organization_url
 
         return repo_url, repo_user, repo_password, \
@@ -152,13 +153,13 @@ class SinaraPipeline():
 
     @staticmethod
     def get_fabric_repo(args):
-        repo_url = dataflow_fabric_default_repos[args.type]['url'] \
+        repo_url = dataflow_fabric_default_repo['url'] \
             if not args.fabric else args.fabric
         
-        repo_user = dataflow_fabric_default_repos[args.type]['username'] \
+        repo_user = dataflow_fabric_default_repo['username'] \
             if not args.fabric_git_user else args.fabric_git_user
         
-        repo_password = dataflow_fabric_default_repos[args.type]['password'] \
+        repo_password = dataflow_fabric_default_repo['password'] \
             if not args.fabric_git_password else args.fabric_git_password        
 
         return repo_url, repo_user, repo_password
@@ -175,7 +176,7 @@ class SinaraPipeline():
              step_template_password, \
              step_template_provider_organization_api, \
              step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
-        substep_name = step_template_default_substep_notebook[args.type]
+        substep_name = step_template_default_substep_notebook
         
         create_pipeline_cmd = f"python sinara_pipeline_create.py "\
                               f"--git_step_template_url={step_template_url} "\
@@ -195,11 +196,10 @@ class SinaraPipeline():
 
     @staticmethod
     def pull(args):
-        curr_dir = os.getcwd()
 
-        if not args.type:
-            while not args.type:
-                SinaraPipeline.ensure_pipeline_type(args, "pull")
+        # if not args.type:
+        #     while not args.type:
+        #         SinaraPipeline.ensure_pipeline_type(args, "pull")
 
         step_template_url, step_template_username, \
              step_template_password, \
@@ -207,6 +207,7 @@ class SinaraPipeline():
              step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
         substep_name = step_template_default_substep_notebook[args.type]
 
+        curr_dir = os.getcwd()
         pull_pipeline_cmd = f"python sinara_pipeline_pull.py "\
                             f"--git_step_template_url={step_template_url} "\
                             f"--step_template_nb_substep={substep_name} "\
@@ -225,15 +226,15 @@ class SinaraPipeline():
 
     @staticmethod
     def push(args):
-        if not args.type:
-            while not args.type:
-                SinaraPipeline.ensure_pipeline_type(args, "push")
+        # if not args.type:
+        #     while not args.type:
+        #         SinaraPipeline.ensure_pipeline_type(args, "push")
 
         step_template_url, step_template_username, \
              step_template_password, \
              step_template_provider_organization_api, \
              step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
-        substep_name = step_template_default_substep_notebook[args.type]
+        substep_name = step_template_default_substep_notebook
 
         curr_dir = os.getcwd()
         push_pipeline_cmd = f"python sinara_pipeline_push.py "\
@@ -251,23 +252,49 @@ class SinaraPipeline():
     @staticmethod
     def update(args):
         if args.component == "sinaralib":
-
-            if not args.type:
-                while not args.type:
-                    SinaraPipeline.ensure_pipeline_type(args, f"update {args.component}")
-
-            step_template_url, step_template_username, \
-                step_template_password, \
-                step_template_provider_organization_api, \
-                step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
-
-            curr_dir = os.getcwd()
-            update_sinaralib_pipeline_cmd = f"python sinara_pipeline_update_sinaralib.py "\
-                                            f"--current_dir={curr_dir} "\
-                                            f"--git_provider_organization_api={step_template_provider_organization_api} "\
-                                            f"--git_provider_organization_url={step_template_provider_organization_url}"
+            SinaraPipeline._update_sinaralib(args)
+        elif args.component == "origin":
+            SinaraPipeline._update_origin(args)
         else:
             raise Exception(f'Component {args.component} is not supported by update')
+
+    @staticmethod
+    def _update_sinaralib(args):
+        step_template_url, step_template_username, \
+            step_template_password, \
+            step_template_provider_organization_api, \
+            step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
+
+        curr_dir = os.getcwd()
+        update_sinaralib_pipeline_cmd = f"python sinara_pipeline_update_sinaralib.py "\
+                                        f"--current_dir={curr_dir} "\
+                                        f"--git_provider_organization_api={step_template_provider_organization_api} "\
+                                        f"--git_provider_organization_url={step_template_provider_organization_url}"
+
+
+        try:
+            repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
+            SinaraPipeline.call_dataflow_fabric_command(update_sinaralib_pipeline_cmd, repo_folder)
+        except Exception as e:
+            logging.debug(e)
+            raise Exception('Error while executing fabric scripts, launch CLI with --verbose to see details')
+
+    @staticmethod
+    def _update_origin(args):
+        #git remote set-url origin new.git.url/here
+        step_template_url, step_template_username, \
+            step_template_password, \
+            step_template_provider_organization_api, \
+            step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
+        new_origin_url = args.new_origin_url 
+
+        curr_dir = os.getcwd()
+        update_sinaralib_pipeline_cmd = f"python sinara_pipeline_update_origin.py "\
+                                        f"--current_dir={curr_dir} "\
+                                        f"--git_provider_organization_api={step_template_provider_organization_api} "\
+                                        f"--git_provider_organization_url={step_template_provider_organization_url} " \
+                                        f"--new_origin_url={new_origin_url}"
+
 
         try:
             repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
