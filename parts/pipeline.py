@@ -91,6 +91,9 @@ class SinaraPipeline():
         fabric_repo_url, fabric_repo_username, fabric_repo_password = SinaraPipeline.get_fabric_repo(args)
         repo_folder = Path(__file__).parent.resolve() / 'fabric'
 
+        if os.environ.get('SINARA_DEBUG') == '1' and repo_folder.exists():
+            return repo_folder
+        
         if repo_folder.exists():
             shutil.rmtree(repo_folder)
         repo_folder.mkdir(parents=True, exist_ok=True)
@@ -169,8 +172,10 @@ class SinaraPipeline():
         curr_dir = os.getcwd()
 
         if not args.type:
+            args.type = 'cv' if 'sinara-cv' in os.environ.get('JUPYTER_IMAGE_SPEC') else 'ml'
             while not args.type:
                 SinaraPipeline.ensure_pipeline_type(args, "create")
+        args.type = str(args.type).lower()
 
         step_template_url, step_template_username, \
              step_template_password, \
@@ -178,7 +183,7 @@ class SinaraPipeline():
              step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
         substep_name = step_template_default_substep_notebook
         
-        create_pipeline_cmd = f"python sinara_pipeline_create.py "\
+        create_pipeline_cmd = f"python sinara_pipeline_create_{args.type}.py "\
                               f"--git_step_template_url={step_template_url} "\
                               f"--step_template_nb_substep={substep_name} "\
                               f"--current_dir={curr_dir} "\
@@ -205,17 +210,20 @@ class SinaraPipeline():
              step_template_password, \
              step_template_provider_organization_api, \
              step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
-        substep_name = step_template_default_substep_notebook[args.type]
+        #substep_name = step_template_default_substep_notebook[args.type]
+
+        print(f"--git_provider_organization_api={step_template_provider_organization_api} ")
+        print(f"--git_provider_organization_url={step_template_provider_organization_url}")
 
         curr_dir = os.getcwd()
         pull_pipeline_cmd = f"python sinara_pipeline_pull.py "\
-                            f"--git_step_template_url={step_template_url} "\
-                            f"--step_template_nb_substep={substep_name} "\
                             f"--current_dir={curr_dir} "\
-                            f"--git_step_template_username={step_template_username} "\
-                            f"--git_step_template_password={step_template_password} "\
                             f"--git_provider_organization_api={step_template_provider_organization_api} "\
                             f"--git_provider_organization_url={step_template_provider_organization_url}"
+                            #f"--step_template_nb_substep={substep_name} "\
+                            #f"--git_step_template_url={step_template_url} "\
+                            #f"--git_step_template_username={step_template_username} "\
+                            #f"--git_step_template_password={step_template_password} "\
         
         try:
             repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
