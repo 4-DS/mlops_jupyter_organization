@@ -3,11 +3,16 @@ from .sinaraml_types import SinaraPipelineType, \
                             step_template_default_repo, \
                             step_template_default_substep_notebook
 import subprocess
-from pathlib import Path
 import tempfile
 import os
 import shutil
 import logging
+from urllib.parse import urlparse, unquote
+from pathlib import Path
+from getpass import getpass
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 class SinaraPipeline():
 
@@ -33,44 +38,37 @@ class SinaraPipeline():
 
     @staticmethod
     def add_create_handler(pipeline_cmd_parser):
-        SinaraPipeline.create_parser = pipeline_cmd_parser.add_parser('create', help='create sinara pipeline')
+        SinaraPipeline.create_parser = pipeline_cmd_parser.add_parser('create', help='Create SinaraML Pipeline')
         SinaraPipeline.create_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
-        SinaraPipeline.create_parser.add_argument('--fabric', type=str, help='sinara fabric repo url')
-        SinaraPipeline.create_parser.add_argument('--fabric_git_user', type=str, help='sinara fabric repo git user name')
-        SinaraPipeline.create_parser.add_argument('--fabric_git_password', type=str, help='sinara fabric repo git password')
-        SinaraPipeline.create_parser.add_argument('--step_template', type=str, help='sinara step template repo url')
-        SinaraPipeline.create_parser.add_argument('--step_template_git_user', type=str, help='sinara fabric repo git user name')
-        SinaraPipeline.create_parser.add_argument('--step_template_git_password', type=str, help='sinara fabric repo git password')
-        SinaraPipeline.create_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
-        SinaraPipeline.create_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
+        SinaraPipeline.create_parser.add_argument('--name', type=str, help='pipeline name', required=True)
+        SinaraPipeline.create_parser.add_argument('--git_username', type=str, help='pipeline git repo user name')
+        SinaraPipeline.create_parser.add_argument('--git_password', type=str, help='pipeline git repo user password')
+        SinaraPipeline.create_parser.add_argument('--git_email', type=str, help='pipeline git repo user email')
+        #SinaraPipeline.create_parser.add_argument('--step_template', type=str, help='sinara step template repo url')
+        #SinaraPipeline.create_parser.add_argument('--step_template_git_user', type=str, help='sinara fabric repo git user name')
+        #SinaraPipeline.create_parser.add_argument('--step_template_git_password', type=str, help='sinara fabric repo git password')
+        #SinaraPipeline.create_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
+        #SinaraPipeline.create_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
         SinaraPipeline.create_parser.set_defaults(func=SinaraPipeline.create)
 
     @staticmethod
     def add_pull_handler(pipeline_cmd_parser):
-        SinaraPipeline.pull_parser = pipeline_cmd_parser.add_parser('pull', help='pull sinara pipeline')
-        #SinaraPipeline.pull_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
-        SinaraPipeline.pull_parser.add_argument('--fabric', type=str, help='sinara fabric repo url')
-        SinaraPipeline.pull_parser.add_argument('--fabric_git_user', type=str, help='sinara fabric repo git user name')
-        SinaraPipeline.pull_parser.add_argument('--fabric_git_password', type=str, help='sinara fabric repo git password')
-        SinaraPipeline.pull_parser.add_argument('--step_template', type=str, help='sinara step template repo url')
-        SinaraPipeline.pull_parser.add_argument('--step_template_git_user', type=str, help='sinara fabric repo git user name')
-        SinaraPipeline.pull_parser.add_argument('--step_template_git_password', type=str, help='sinara fabric repo git password')
-        SinaraPipeline.pull_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
-        SinaraPipeline.pull_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
+        SinaraPipeline.pull_parser = pipeline_cmd_parser.add_parser('pull', help='pull SinaraML Pipeline')
+        SinaraPipeline.pull_parser.add_argument('--git_username', type=str, help='pipeline git repo user name')
+        SinaraPipeline.pull_parser.add_argument('--git_password', type=str, help='pipeline git repo password')
+        SinaraPipeline.pull_parser.add_argument('--pipeline_git_url', type=str, help='url of the pipeline "folder" in the git repo')
+        #SinaraPipeline.pull_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
+        #SinaraPipeline.pull_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
         SinaraPipeline.pull_parser.set_defaults(func=SinaraPipeline.pull)
 
     @staticmethod
     def add_push_handler(pipeline_cmd_parser):
         SinaraPipeline.push_parser = pipeline_cmd_parser.add_parser('push', help='push sinara pipeline')
-        #SinaraPipeline.push_parser.add_argument('--type', type=SinaraPipelineType, choices=list(SinaraPipelineType), help='sinara pipeline type (default: %(default)s)')
-        SinaraPipeline.push_parser.add_argument('--fabric', type=str, help='sinara fabric repo url')
-        SinaraPipeline.push_parser.add_argument('--fabric_git_user', type=str, help='sinara fabric repo git user name')
-        SinaraPipeline.push_parser.add_argument('--fabric_git_password', type=str, help='sinara fabric repo git password')
-        SinaraPipeline.push_parser.add_argument('--step_template', type=str, help='sinara step template repo url')
-        SinaraPipeline.push_parser.add_argument('--step_template_git_user', type=str, help='sinara fabric repo git user name')
-        SinaraPipeline.push_parser.add_argument('--step_template_git_password', type=str, help='sinara fabric repo git password')
-        SinaraPipeline.push_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
-        SinaraPipeline.push_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
+        SinaraPipeline.push_parser.add_argument('--git_username', type=str, help='pipeline git repo user name')
+        SinaraPipeline.push_parser.add_argument('--git_password', type=str, help='pipeline git repo user password or token')
+        SinaraPipeline.push_parser.add_argument('--pipeline_git_url', type=str, help='url of the pipeline "folder" in the git repo')
+        #SinaraPipeline.push_parser.add_argument('--git_provider_api', type=str, help='sinara step template repo git provider api url')
+        #SinaraPipeline.push_parser.add_argument('--git_provider_url', type=str, help='sinara step template repo git provider organization url')
         SinaraPipeline.push_parser.set_defaults(func=SinaraPipeline.push)
 
     @staticmethod
@@ -124,7 +122,7 @@ class SinaraPipeline():
         type_input = None
         while not type_input:
             try:
-                type_input = int(input(f"Please, enter pipeline type to {command} 1) ML 2) CV: "))
+                type_input = int(input(f"Please, enter pipeline type to {command} [1] ML [2] CV: "))
             except:
                 type_input = None
         if type_input == 1:
@@ -134,36 +132,66 @@ class SinaraPipeline():
         else:
             args.type = None
 
+
+    @staticmethod
+    def read_stored_git_creds(git_repo_url):
+        username = None
+        password = None
+        git_credentials = Path.home() / '.git-credentials'
+        if git_credentials.exists():
+            print(git_credentials)
+            with open(git_credentials, 'r') as f:
+                lines = f.readlines()
+            for l in lines:
+                url = urlparse(l)
+                if urlparse(git_repo_url).netloc in url.netloc:
+                    username = unquote(url.username)
+                    password = unquote(url.password)
+        # print(f"user: {username}, password: {password}")
+        # exit(0)
+        if username and password:
+            logger.info('Using stored GIT credentials')
+        return username, password
+    
     @staticmethod
     def get_step_template_repo(args):
         repo_url = step_template_default_repo['url'] \
             if not 'step_template' in args or not args.step_template else args.step_template
         
         repo_user = step_template_default_repo['username'] \
-             if not 'step_template_git_user' in args or not args.step_template_git_user else args.step_template_git_user
+             if not 'git_username' in args or not args.git_username else args.git_username
         
         repo_password = step_template_default_repo['password'] \
-            if not 'step_template_git_password' in args or not args.step_template_git_password else args.step_template_git_password
+            if not 'git_password' in args or not args.git_password else args.git_password
         
         repo_provider_organization_api = step_template_default_repo['provider_organization_api'] \
-            if not 'step_template_provider_organization_api' in args or not args.step_template_provider_organization_api else args.step_template_provider_organization_api
+            if not 'git_provider_api' in args or not args.git_provider_api else args.git_provider_api
 
         repo_provider_organization_url = step_template_default_repo['provider_organization_url'] \
-            if not 'step_template_provider_organization_url' in args or not args.step_template_provider_organization_url else args.step_template_provider_organization_url
+            if not 'git_provider_url' in args or not args.git_provider_url else args.git_provider_url
+        
+        step_template_provider_type = step_template_default_repo['provider_type'] \
+            if not 'git_provider_type' in args or not args.git_provider_type else args.git_provider_type
+
+        if repo_user and not repo_password:
+            repo_password = getpass("Git password: ")
+
+        if not repo_user and not repo_password:
+            repo_user, repo_password = SinaraPipeline.read_stored_git_creds(repo_provider_organization_url)
 
         return repo_url, repo_user, repo_password, \
-               repo_provider_organization_api, repo_provider_organization_url
+               repo_provider_organization_api, repo_provider_organization_url, step_template_provider_type
 
     @staticmethod
     def get_fabric_repo(args):
         repo_url = dataflow_fabric_default_repo['url'] \
-            if not args.fabric else args.fabric
+            if not 'fabric' in args or not args.fabric else args.fabric
         
         repo_user = dataflow_fabric_default_repo['username'] \
-            if not args.fabric_git_user else args.fabric_git_user
+            if not args.git_username else args.git_username
         
         repo_password = dataflow_fabric_default_repo['password'] \
-            if not args.fabric_git_password else args.fabric_git_password        
+            if not args.git_password else args.git_password
 
         return repo_url, repo_user, repo_password
 
@@ -180,18 +208,22 @@ class SinaraPipeline():
         step_template_url, step_template_username, \
              step_template_password, \
              step_template_provider_organization_api, \
-             step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
+             step_template_provider_organization_url, \
+             step_template_provider_type = SinaraPipeline.get_step_template_repo(args)
         substep_name = step_template_default_substep_notebook
         
-        create_pipeline_cmd = f"python sinara_pipeline_create_{args.type}.py "\
+        create_pipeline_cmd = f"python sinara_pipeline_create.py "\
+                              f"--pipeline_type={args.type} "\
+                              f"--pipeline_name={args.name} "\
                               f"--git_step_template_url={step_template_url} "\
-                              f"--step_template_nb_substep={substep_name} "\
-                              f"--current_dir={curr_dir} "\
                               f"--git_step_template_username={step_template_username} "\
                               f"--git_step_template_password={step_template_password} "\
-                              f"--git_provider_organization_api={step_template_provider_organization_api} "\
-                              f"--git_provider_organization_url={step_template_provider_organization_url}"
-        
+                              f"--step_template_nb_substep={substep_name} "\
+                              f"--pipeline_dir={curr_dir} "\
+                              f"--git_username={step_template_username} "\
+                              f"--git_provider={step_template_provider_type}"
+        logger.debug(create_pipeline_cmd)
+
         try:
             repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
             SinaraPipeline.call_dataflow_fabric_command(create_pipeline_cmd, repo_folder)
@@ -202,28 +234,23 @@ class SinaraPipeline():
     @staticmethod
     def pull(args):
 
-        # if not args.type:
-        #     while not args.type:
-        #         SinaraPipeline.ensure_pipeline_type(args, "pull")
-
         step_template_url, step_template_username, \
              step_template_password, \
              step_template_provider_organization_api, \
-             step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
-        #substep_name = step_template_default_substep_notebook[args.type]
+             step_template_provider_organization_url, \
+             step_template_provider_type = SinaraPipeline.get_step_template_repo(args)
 
-        print(f"--git_provider_organization_api={step_template_provider_organization_api} ")
-        print(f"--git_provider_organization_url={step_template_provider_organization_url}")
+        pipeline_git_url = '' if not "pipeline_git_url" in args else args.pipeline_git_url
 
         curr_dir = os.getcwd()
         pull_pipeline_cmd = f"python sinara_pipeline_pull.py "\
-                            f"--current_dir={curr_dir} "\
-                            f"--git_provider_organization_api={step_template_provider_organization_api} "\
-                            f"--git_provider_organization_url={step_template_provider_organization_url}"
-                            #f"--step_template_nb_substep={substep_name} "\
-                            #f"--git_step_template_url={step_template_url} "\
-                            #f"--git_step_template_username={step_template_username} "\
-                            #f"--git_step_template_password={step_template_password} "\
+                            f"--pipeline_dir={curr_dir} "\
+                            f"--pipeline_git_url={pipeline_git_url} "\
+                            f"--git_provider={step_template_provider_type} " \
+                            f"--git_provider_api={step_template_provider_organization_api} " \
+                            f"--git_provider_url={step_template_provider_organization_url} " \
+                            f"--git_username={step_template_username} "\
+                            f"--git_password={step_template_password} "
         
         try:
             repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
@@ -234,21 +261,26 @@ class SinaraPipeline():
 
     @staticmethod
     def push(args):
-        # if not args.type:
-        #     while not args.type:
-        #         SinaraPipeline.ensure_pipeline_type(args, "push")
 
         step_template_url, step_template_username, \
              step_template_password, \
              step_template_provider_organization_api, \
-             step_template_provider_organization_url = SinaraPipeline.get_step_template_repo(args)
-        substep_name = step_template_default_substep_notebook
+             step_template_provider_organization_url, \
+             step_template_provider_type = SinaraPipeline.get_step_template_repo(args)
+        
+        pipeline_git_url = '' if not "pipeline_git_url" in args else args.pipeline_git_url
 
         curr_dir = os.getcwd()
         push_pipeline_cmd = f"python sinara_pipeline_push.py "\
-                            f"--current_dir={curr_dir} "\
-                            f"--git_provider_organization_api={step_template_provider_organization_api} "\
-                            f"--git_provider_organization_url={step_template_provider_organization_url}"
+                            f"--pipeline_dir={curr_dir} "\
+                            f"--pipeline_git_url={pipeline_git_url} "\
+                            f"--git_username={step_template_username} " \
+                            f"--git_password={step_template_password} " \
+                            f"--git_provider={step_template_provider_type} " \
+                            f"--git_provider_api={step_template_provider_organization_api} " \
+                            f"--git_provider_url={step_template_provider_organization_url}"
+        
+        logger.debug(push_pipeline_cmd)
 
         try:
             repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
