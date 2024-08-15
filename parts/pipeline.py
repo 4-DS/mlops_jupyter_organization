@@ -36,6 +36,7 @@ class SinaraPipeline():
         SinaraPipeline.add_push_handler(pipeline_subparsers)
         SinaraPipeline.add_update_handler(pipeline_subparsers)
         SinaraPipeline.add_checkout_handler(pipeline_subparsers)
+        SinaraPipeline.add_status_handler(pipeline_subparsers)
 
     @staticmethod
     def add_create_handler(pipeline_cmd_parser):
@@ -83,14 +84,19 @@ class SinaraPipeline():
 
     @staticmethod
     def add_checkout_handler(pipeline_cmd_parser):
-        SinaraPipeline.checkout_parser = pipeline_cmd_parser.add_parser('checkout', help='checkout a specific branch in all sinara pipeline components')
+        SinaraPipeline.checkout_parser = pipeline_cmd_parser.add_parser('checkout', help='checkout a specific branch in all sinara pipeline steps')
         SinaraPipeline.checkout_parser.add_argument('--git_username', type=str, help='sinara fabric repo git user name')
         SinaraPipeline.checkout_parser.add_argument('--git_password', type=str, help='sinara fabric repo git password')
-        SinaraPipeline.checkout_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
-        SinaraPipeline.checkout_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
+        #SinaraPipeline.checkout_parser.add_argument('--step_template_provider_organization_api', type=str, help='sinara step template repo git provider api url')
+        #SinaraPipeline.checkout_parser.add_argument('--step_template_provider_organization_url', type=str, help='sinara step template repo git provider organization url')
         SinaraPipeline.checkout_parser.add_argument('--git_branch', type=str, help='sinara step template branch')
-        SinaraPipeline.checkout_parser.add_argument('--steps_folder_glob', type=str, help='sinara steps folder glob pattern')
+        #SinaraPipeline.checkout_parser.add_argument('--steps_folder_glob', type=str, help='sinara steps folder glob pattern')
         SinaraPipeline.checkout_parser.set_defaults(func=SinaraPipeline.checkout)
+
+    @staticmethod
+    def add_status_handler(pipeline_cmd_parser):
+        SinaraPipeline.status_parser = pipeline_cmd_parser.add_parser('status', help='list status of all sinara pipeline steps')
+        SinaraPipeline.status_parser.set_defaults(func=SinaraPipeline.status)
 
     @staticmethod
     def ensure_dataflow_fabric_repo_exists(args):
@@ -195,11 +201,11 @@ class SinaraPipeline():
         repo_url = dataflow_fabric_default_repo['url'] \
             if not 'fabric' in args or not args.fabric else args.fabric
         
-        repo_user = dataflow_fabric_default_repo['username'] \
-            if not args.git_username else args.git_username
+        repo_user = args.git_username \
+            if hasattr(args, 'git_username') and args.git_username else dataflow_fabric_default_repo['username']
         
-        repo_password = dataflow_fabric_default_repo['password'] \
-            if not args.git_password else args.git_password
+        repo_password =  args.git_password \
+            if hasattr(args, 'git_username') and args.git_password else dataflow_fabric_default_repo['password']
 
         return repo_url, repo_user, repo_password
 
@@ -361,10 +367,10 @@ class SinaraPipeline():
             args.git_branch = input("Enter branch name to checkout: ")
         
         step_template_url, step_template_username, \
-             step_template_password, \
-             step_template_provider_api, \
-             step_template_provider_url, \
-             step_template_provider_type = SinaraPipeline.get_step_template_repo(args)
+        step_template_password, \
+        step_template_provider_api, \
+        step_template_provider_url, \
+        step_template_provider_type = SinaraPipeline.get_step_template_repo(args)
 
         curr_dir = os.getcwd()
         checkout_pipeline_cmd = f"python sinara_pipeline_checkout.py "\
@@ -384,3 +390,29 @@ class SinaraPipeline():
         except Exception as e:
             logging.debug(e)
             raise Exception('Error while executing fabric scripts, launch CLI with --verbose to see details')
+
+    @staticmethod
+    def status(args):
+
+        step_template_url, step_template_username, \
+        step_template_password, \
+        step_template_provider_api, \
+        step_template_provider_url, \
+        step_template_provider_type = SinaraPipeline.get_step_template_repo(args)
+
+        curr_dir = os.getcwd()
+        pipeline_status_cmd = f"python sinara_pipeline_status.py "\
+                                        f"--pipeline_dir={curr_dir} "\
+                                        f"--git_provider_type={step_template_provider_type} "
+                                        # f"--git_provider_api={step_template_provider_api} "\
+                                        # f"--git_provider_url={step_template_provider_url} "\
+                                        # f"--git_username={step_template_username} "\
+                                        # f"--git_password={step_template_password} "
+
+        try:
+            repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
+            SinaraPipeline.call_dataflow_fabric_command(pipeline_status_cmd, repo_folder)
+        except Exception as e:
+            logging.debug(e)
+            raise Exception('Error while executing fabric scripts, launch CLI with --verbose to see details')
+
