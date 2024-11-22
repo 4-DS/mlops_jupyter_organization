@@ -37,6 +37,7 @@ class SinaraPipeline():
         SinaraPipeline.add_update_handler(pipeline_subparsers)
         SinaraPipeline.add_checkout_handler(pipeline_subparsers)
         SinaraPipeline.add_status_handler(pipeline_subparsers)
+        SinaraPipeline.add_transfer_handler(pipeline_subparsers)
 
     @staticmethod
     def add_create_handler(pipeline_cmd_parser):
@@ -97,6 +98,14 @@ class SinaraPipeline():
     def add_status_handler(pipeline_cmd_parser):
         SinaraPipeline.status_parser = pipeline_cmd_parser.add_parser('status', help='list status of all sinara pipeline steps')
         SinaraPipeline.status_parser.set_defaults(func=SinaraPipeline.status)
+
+    @staticmethod
+    def add_transfer_handler(pipeline_cmd_parser):
+        SinaraPipeline.transfer_parser = pipeline_cmd_parser.add_parser('transfer', help='transfer sinara pipeline to another env')
+        SinaraPipeline.transfer_parser.add_argument('--git_username', type=str, help='sinara fabric repo git user name')
+        SinaraPipeline.transfer_parser.add_argument('--git_password', type=str, help='sinara fabric repo git password')
+        SinaraPipeline.transfer_parser.add_argument('--new_origin_url', type=str, help='"new git origin url for pipeline steps to transfer to')
+        SinaraPipeline.transfer_parser.set_defaults(func=SinaraPipeline.transfer)
 
     @staticmethod
     def ensure_dataflow_fabric_repo_exists(args):
@@ -416,3 +425,28 @@ class SinaraPipeline():
             logging.debug(e)
             raise Exception('Error while executing fabric scripts, launch CLI with --verbose to see details')
 
+    @staticmethod
+    def transfer(args):
+        step_template_url, step_template_username, \
+             step_template_password, \
+             step_template_provider_api, \
+             step_template_provider_url, \
+             step_template_provider_type = SinaraPipeline.get_step_template_repo(args)
+        
+        new_origin_url = args.new_origin_url
+
+        curr_dir = os.getcwd()
+        transfer_pipeline_cmd = f"python sinara_pipeline_transfer.py "\
+                                        f"--pipeline_dir={curr_dir} "\
+                                        f"--git_provider_type={step_template_provider_type} "\
+                                        f"--git_provider_api={step_template_provider_api} "\
+                                        f"--git_provider_url={step_template_provider_url} "\
+                                        f"--git_username={step_template_username} "\
+                                        f"--git_password={step_template_password} "\
+                                        f"--new_origin_url={new_origin_url}"
+        try:
+            repo_folder = SinaraPipeline.ensure_dataflow_fabric_repo_exists(args)
+            SinaraPipeline.call_dataflow_fabric_command(transfer_pipeline_cmd, repo_folder)
+        except Exception as e:
+            logging.debug(e)
+            raise Exception('Error while executing fabric scripts, launch CLI with --verbose to see details')
